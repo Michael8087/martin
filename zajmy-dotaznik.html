@@ -555,7 +555,7 @@ async function sendResults() {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     btn.innerHTML = '✅ Odesláno!';
-    status.textContent = 'Výsledky byly odeslány na mike.minovsky@gmail.com.';
+    status.textContent = 'Výsledky byly úspěšně odeslány. ✓';
     status.className = 'email-status ok';
     spawnParticles(window.innerWidth / 2, window.innerHeight * 0.72, 35);
   } catch (err) {
