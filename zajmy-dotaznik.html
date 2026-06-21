@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dotazník zájmů a zálib</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #f0f4ff 0%, #fce7f3 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+
+    #particle-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 999;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+      max-width: 660px;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      padding: 2rem 2.5rem;
+      color: white;
+    }
+    .card-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .card-header p  { opacity: 0.85; font-size: 0.95rem; }
+
+    /* Progress */
+    .progress-wrap { padding: 1.2rem 2.5rem 0; }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.8rem; color: #888; margin-bottom: 6px;
+    }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #a855f7);
+      border-radius: 99px;
+      transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* Question */
+    .question-area { padding: 1.6rem 2.5rem; }
+    .question-number {
+      font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: #a855f7; margin-bottom: 0.4rem;
+    }
+    .question-text {
+      font-size: 1.1rem; font-weight: 600;
+      color: #1f2937; margin-bottom: 1.1rem; line-height: 1.5;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(-40px); }
+    }
+    .slide-in  { animation: slideIn  0.30s cubic-bezier(.4,0,.2,1) both; }
+    .slide-out { animation: slideOut 0.20s cubic-bezier(.4,0,.2,1) both; }
+
+    /* Options grid – 2 columns for many options */
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    @media (max-width: 480px) { .options { grid-template-columns: 1fr; } }
+
+    .option {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.75rem 0.9rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s, transform 0.15s, box-shadow 0.18s;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .option:hover {
+      border-color: #a855f7; background: #faf5ff;
+      transform: translateY(-2px);
+    }
+    .option.selected {
+      border-color: #6366f1; background: #eef2ff;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
+    .ripple {
+      position: absolute; border-radius: 50%;
+      background: rgba(99,102,241,0.22);
+      transform: scale(0);
+      animation: rippleAnim 0.55s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+
+    @keyframes emojiBounce {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.55) rotate(-10deg); }
+      60%  { transform: scale(0.9) rotate(5deg); }
+      80%  { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    .option.selected .option-emoji { animation: emojiBounce 0.42s ease both; }
+
+    .option input[type="radio"] { display: none; }
+
+    .radio-circle {
+      width: 18px; height: 18px;
+      border: 2px solid #d1d5db; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.18s;
+    }
+    .option.selected .radio-circle { border-color: #6366f1; }
+    .radio-dot {
+      width: 9px; height: 9px; border-radius: 50%; background: #6366f1;
+      opacity: 0; transform: scale(0);
+      transition: all 0.22s cubic-bezier(.34,1.56,.64,1);
+    }
+    .option.selected .radio-dot { opacity: 1; transform: scale(1); }
+    .option-emoji { font-size: 1.1rem; display: inline-block; }
+    .option-label { font-size: 0.88rem; color: #374151; font-weight: 500; line-height: 1.3; }
+
+    /* Nav */
+    .nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 2.5rem 1.8rem;
+    }
+    button {
+      font-family: inherit; font-size: 0.92rem; font-weight: 600;
+      padding: 0.7rem 1.6rem; border-radius: 10px; border: none;
+      cursor: pointer; transition: all 0.18s ease;
+    }
+    .btn-back { background: #f3f4f6; color: #6b7280; }
+    .btn-back:hover { background: #e5e7eb; }
+    .btn-back:disabled { opacity: 0.3; cursor: default; }
+    .btn-next { background: linear-gradient(135deg, #6366f1, #a855f7); color: white; }
+    .btn-next:hover:not(:disabled) { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 14px rgba(99,102,241,0.4); }
+    .btn-next:disabled { opacity: 0.4; cursor: default; }
+
+    /* Flash */
+    #flash {
+      position: fixed; inset: 0; z-index: 998;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none; opacity: 0;
+    }
+    #flash .flash-ring {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: rgba(99,102,241,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem;
+    }
+    @keyframes flashAnim {
+      0%   { opacity: 0; transform: scale(0.4); }
+      40%  { opacity: 1; transform: scale(1.1); }
+      70%  { opacity: 1; transform: scale(0.95); }
+      100% { opacity: 0; transform: scale(1.3); }
+    }
+    #flash.active { animation: flashAnim 0.65s ease forwards; }
+
+    /* ── Reaction toast ── */
+    #reaction-toast {
+      position: fixed;
+      top: calc(50% + 68px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: white;
+      border-radius: 999px;
+      padding: 0.65rem 1.3rem;
+      box-shadow: 0 6px 30px rgba(99,102,241,0.22), 0 2px 8px rgba(0,0,0,0.1);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1f2937;
+      white-space: nowrap;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      border: 1.5px solid #e9d5ff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    @keyframes toastIn {
+      0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.85); }
+      55%  { opacity: 1; transform: translateX(-50%) translateY(4px) scale(1.05); }
+      80%  { transform: translateX(-50%) translateY(0) scale(1); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+    @keyframes toastOut {
+      0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.9); }
+    }
+    #reaction-toast.show { animation: toastIn 0.4s cubic-bezier(.34,1.56,.64,1) forwards; }
+    #reaction-toast.hide { animation: toastOut 0.3s ease forwards; }
+
+    /* Result */
+    .result { display: none; padding: 2.2rem 2.5rem; text-align: center; }
+    .result-icon { font-size: 3.5rem; margin-bottom: 0.8rem; }
+    @keyframes popIn {
+      0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+      70%  { transform: scale(1.2) rotate(5deg); }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    .result-icon.pop { animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1) both; }
+    .result h2 { font-size: 1.4rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem; }
+    .result > p { color: #6b7280; font-size: 0.9rem; margin-bottom: 1.4rem; }
+
+    .result-list {
+      text-align: left; background: #f9fafb;
+      border-radius: 14px; padding: 1rem 1.3rem; margin-bottom: 1.6rem;
+    }
+    .result-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;
+      font-size: 0.85rem; color: #374151;
+      opacity: 0; transform: translateY(10px);
+    }
+    .result-item.visible {
+      opacity: 1; transform: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .result-item:last-child { border-bottom: none; }
+    .result-item span:first-child { color: #6b7280; max-width: 52%; }
+    .result-item span:last-child  { font-weight: 600; color: #6366f1; }
+
+    /* Gifts */
+    .gifts-section { text-align: left; margin-bottom: 1.8rem; }
+    .gifts-heading {
+      font-size: 1rem; font-weight: 700; color: #1f2937;
+      margin-bottom: 0.9rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    .gift-card {
+      background: linear-gradient(135deg, #f5f3ff, #fdf4ff);
+      border: 1.5px solid #e9d5ff;
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.8rem;
+      opacity: 0; transform: translateY(12px);
+    }
+    .gift-card.visible {
+      opacity: 1; transform: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .gift-top { display: flex; align-items: flex-start; gap: 0.9rem; }
+    .gift-rank {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      color: white; font-weight: 700; font-size: 0.82rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .gift-rank.gold   { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+    .gift-rank.silver { background: linear-gradient(135deg, #94a3b8, #cbd5e1); color: #374151; }
+    .gift-rank.bronze { background: linear-gradient(135deg, #b45309, #d97706); }
+
+    .gift-body { flex: 1; }
+    .gift-name { font-weight: 700; color: #1f2937; font-size: 0.95rem; margin-bottom: 0.2rem; }
+    .gift-desc { font-size: 0.8rem; color: #6b7280; line-height: 1.4; }
+
+    /* Vote row */
+    .vote-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-top: 0.8rem; padding-top: 0.7rem;
+      border-top: 1px solid #ede9fe;
+      flex-wrap: wrap;
+    }
+    .vote-label { font-size: 0.78rem; color: #6b7280; margin-right: 0.2rem; }
+    .vote-btn {
+      font-size: 1rem; padding: 0.3rem 0.7rem;
+      border-radius: 8px; border: 1.5px solid #e5e7eb;
+      background: white; cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; gap: 0.3rem;
+      font-weight: 600; color: #374151;
+    }
+    .vote-btn:hover { border-color: #a855f7; background: #faf5ff; }
+    .vote-btn.active-up   { border-color: #10b981; background: #ecfdf5; color: #059669; }
+    .vote-btn.active-down { border-color: #ef4444; background: #fef2f2; color: #dc2626; }
+    .vote-count { font-size: 0.78rem; color: #9ca3af; }
+
+    /* Comment area */
+    .comment-area {
+      margin-top: 0.7rem;
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+    .comment-area.open { max-height: 160px; }
+    .comment-area textarea {
+      width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px;
+      padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.83rem;
+      resize: none; outline: none; color: #374151;
+      transition: border-color 0.18s;
+      background: white;
+    }
+    .comment-area textarea:focus { border-color: #a855f7; }
+    .comment-submit {
+      margin-top: 0.5rem;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      color: white; padding: 0.45rem 1.1rem; font-size: 0.82rem;
+      border-radius: 8px; border: none; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .comment-submit:hover { opacity: 0.88; }
+
+    /* Submitted state */
+    .gift-card.submitted .vote-row,
+    .gift-card.submitted .comment-area { pointer-events: none; }
+    .submitted-msg {
+      display: none; margin-top: 0.6rem;
+      font-size: 0.8rem; color: #059669; font-weight: 600;
+      animation: fadeUp 0.3s ease both;
+    }
+    .gift-card.submitted .submitted-msg { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .btn-restart {
+      background: white;
+      color: #6b7280;
+      border: 2px solid #e5e7eb;
+      padding: 0.8rem 2.2rem; font-size: 1rem;
+    }
+    .btn-restart:hover { background: #f3f4f6; }
+
+    /* Email button */
+    .email-row {
+      display: flex; gap: 0.8rem; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 1rem;
+    }
+    .btn-email {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.6rem; font-size: 0.95rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      transition: all 0.18s;
+    }
+    .btn-email:hover:not(:disabled) {
+      opacity: 0.9; transform: translateY(-2px);
+      box-shadow: 0 4px 14px rgba(99,102,241,0.4);
+    }
+    .btn-email:disabled { opacity: 0.5; cursor: default; }
+    .btn-email.sending { opacity: 0.7; cursor: default; }
+
+    .email-status {
+      font-size: 0.83rem; margin-bottom: 1rem;
+      min-height: 1.2em; font-weight: 600;
+    }
+    .email-status.ok  { color: #059669; }
+    .email-status.err { color: #dc2626; }
+  </style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+<div id="flash"><div class="flash-ring" id="flash-icon">✨</div></div>
+<div id="reaction-toast"><span id="reaction-emoji"></span><span id="reaction-text"></span></div>
+
+<div class="card">
+  <div class="card-header">
+    <h1>🎯 Dotazník zájmů</h1>
+    <p>Pár otázek o tom, co tě baví a zajímá</p>
+  </div>
+
+  <div id="form-screen">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progress-text">Otázka 1 z 6</span>
+        <span id="progress-pct">0 %</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="question-area" id="question-area">
+      <div class="question-number" id="q-number">Otázka 1</div>
+      <div class="question-text" id="q-text"></div>
+      <div class="options" id="options-container"></div>
+    </div>
+
+    <div class="nav">
+      <button class="btn-back" id="btn-back" onclick="prevQuestion()" disabled>← Zpět</button>
+      <button class="btn-next" id="btn-next" onclick="nextQuestion()" disabled>Dále →</button>
+    </div>
+  </div>
+
+  <div class="result" id="result-screen">
+    <div class="result-icon" id="result-icon">🎉</div>
+    <h2>Hotovo! Díky za vyplnění</h2>
+    <p>Tady je přehled tvých odpovědí a co bys mohl dostat:</p>
+    <div class="result-list" id="result-list"></div>
+
+    <div class="gifts-section">
+      <div class="gifts-heading">🎁 Dárky šité na míru</div>
+      <div id="gifts-container"></div>
+    </div>
+
+    <div class="email-row">
+      <button class="btn-email" id="btn-email" onclick="sendResults()">📤 Odeslat výsledky</button>
+      <button class="btn-restart" onclick="restart()">↺ Vyplnit znovu</button>
+    </div>
+    <div class="email-status" id="email-status"></div>
+  </div>
+</div>
+
+<script>
+/* ─── QUESTIONS (6–7 možností každá) ──────────────────── */
+const questions = [
+  {
+    text: "Jak nejraději trávíš volný čas?",
+    options: [
+      { emoji:"📚", label:"Čtení knih nebo sledování filmů" },
+      { emoji:"🏃", label:"Sportování a pohyb venku" },
+      { emoji:"🎮", label:"Videohry nebo deskové hry" },
+      { emoji:"🛠️", label:"Kutilství, tvoření nebo vaření" },
+      { emoji:"🎵", label:"Hudba – hraní nebo poslech" },
+      { emoji:"🌿", label:"Zahradničení nebo procházky v přírodě" },
+      { emoji:"✈️", label:"Plánování výletů a cestování" },
+    ]
+  },
+  {
+    text: "Jaký žánr hudby tě nejvíc chytne?",
+    options: [
+      { emoji:"🎸", label:"Rock nebo metal" },
+      { emoji:"🎹", label:"Klasika nebo jazz" },
+      { emoji:"🎤", label:"Pop nebo hip-hop" },
+      { emoji:"🎻", label:"Folk nebo country" },
+      { emoji:"🎧", label:"Elektronika nebo dance" },
+      { emoji:"🎺", label:"R&B nebo soul" },
+    ]
+  },
+  {
+    text: "Kdybys mohl/a cestovat kamkoliv, jaký typ destinace by to byl?",
+    options: [
+      { emoji:"🏖️", label:"Teplé moře a pláže" },
+      { emoji:"🏔️", label:"Hory a příroda" },
+      { emoji:"🏙️", label:"Velká rušná města" },
+      { emoji:"🏯", label:"Historická místa a památky" },
+      { emoji:"🌴", label:"Exotické ostrovy nebo džungle" },
+      { emoji:"🎑", label:"Asie a Dálný východ" },
+      { emoji:"🇳🇴", label:"Sever – fjordy, polární záře" },
+    ]
+  },
+  {
+    text: "Co tě nejvíce zajímá z těchto oblastí?",
+    options: [
+      { emoji:"🔬", label:"Věda a technologie" },
+      { emoji:"🎨", label:"Umění a kultura" },
+      { emoji:"💰", label:"Podnikání a finance" },
+      { emoji:"🌿", label:"Příroda a ekologie" },
+      { emoji:"🏛️", label:"Historie a archeologie" },
+      { emoji:"🧠", label:"Psychologie a filozofie" },
+    ]
+  },
+  {
+    text: "Jaký sport nebo pohybovou aktivitu preferuješ?",
+    options: [
+      { emoji:"🚴", label:"Cyklistika nebo běh" },
+      { emoji:"🏊", label:"Plavání nebo vodní sporty" },
+      { emoji:"⛹️", label:"Týmové sporty (fotbal, basketbal…)" },
+      { emoji:"🧘", label:"Jóga nebo meditace" },
+      { emoji:"🥊", label:"Bojové umění nebo fitness" },
+      { emoji:"🧗", label:"Horolezectví nebo hiking" },
+      { emoji:"🎾", label:"Raketa – tenis, badminton, squash" },
+    ]
+  },
+  {
+    text: "Jak nejraději trávíš víkend?",
+    options: [
+      { emoji:"👨‍👩‍👧", label:"S rodinou nebo blízkými přáteli" },
+      { emoji:"🎭", label:"Na kulturní nebo sportovní akci" },
+      { emoji:"🛋️", label:"Doma v klidu a pohodě" },
+      { emoji:"🌲", label:"V přírodě nebo na výletě" },
+      { emoji:"🍕", label:"Restaurace, kavárny, dobré jídlo" },
+      { emoji:"🎲", label:"Hrát hry nebo tvořit něco rukama" },
+    ]
+  },
+];
+
+/* ─── FORMSPREE CONFIG ───────────────────────────────────
+   1. Jdi na https://formspree.io a zaregistruj se (zdarma)
+   2. Klikni "New Form", zadej mike.minovsky@gmail.com
+   3. Zkopíruj ID z URL (vypadá jako: xpzvqwer)
+   4. Vlož ho sem:
+──────────────────────────────────────────────────────── */
+const FORMSPREE_ID = 'maqgwzrq';  // ← např. 'xpzvqwer'
+
+async function sendResults() {
+  const btn    = document.getElementById('btn-email');
+  const status = document.getElementById('email-status');
+  const currentGifts = computeGifts(answers);
+  const now = new Date().toLocaleString('cs-CZ');
+
+  if (!FORMSPREE_ID || FORMSPREE_ID.length < 4) {
+    status.textContent = '⚠️ Nejdříve vlož Formspree ID do kódu.';
+    status.className = 'email-status err';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.classList.add('sending');
+  btn.innerHTML = '⏳ Odesílám…';
+  status.textContent = '';
+
+  const answersText = questions.map((q, i) => {
+    const opt = q.options[answers[i]];
+    return `${i + 1}. ${q.text} → ${opt.emoji} ${opt.label}`;
+  }).join('\n');
+
+  const giftsText = currentGifts.map((g, i) => {
+    const medal = ['🥇','🥈','🥉'][i];
+    const v = votes[i];
+    const voteStr = v.vote === 'up' ? '👍 líbí se' : v.vote === 'down' ? '👎 nelíbí se' : 'bez hlasu';
+    const commentStr = v.comment?.trim() ? `Komentář: "${v.comment.trim()}"` : 'Bez komentáře';
+    return `${medal} ${g.name}\n   Hlas: ${voteStr} | ${commentStr}`;
+  }).join('\n\n');
+
+  try {
+    const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        _subject: `Výsledky dotazníku zájmů 🎯 (${now})`,
+        Vyplněno: now,
+        Odpovědi: answersText,
+        'Dárky + hodnocení': giftsText,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    btn.innerHTML = '✅ Odesláno!';
+    status.textContent = 'Výsledky byly odeslány na mike.minovsky@gmail.com.';
+    status.className = 'email-status ok';
+    spawnParticles(window.innerWidth / 2, window.innerHeight * 0.72, 35);
+  } catch (err) {
+    btn.disabled = false;
+    btn.classList.remove('sending');
+    btn.innerHTML = '📤 Odeslat výsledky';
+    status.textContent = '❌ Odeslání selhalo, zkus to znovu.';
+    status.className = 'email-status err';
+  }
+}
+
+/* ─── GIFT DATABASE ─────────────────────────────────────
+   Tags: "q{otázka}:{index možnosti}"
+   Čím více tagů sedí, tím vyšší skóre.
+──────────────────────────────────────────────────────── */
+const GIFTS = [
+  { emoji:"📖", name:"Knížka – aktuální bestseller",
+    desc:"Něco na čtení, co tě chytne hned na první stránce a nepustí, dokud to nedočteš do 3 ráno.",
+    tags:["q0:0","q3:1","q5:0","q5:2"] },
+
+  { emoji:"📕", name:"Komiks nebo grafický román",
+    desc:"Příběh i obrázky — čteš to za hodinku, ale přemýšlíš o tom celý týden.",
+    tags:["q0:2","q0:0","q5:2","q5:5"] },
+
+  { emoji:"📘", name:"Průvodce do oblíbené destinace",
+    desc:"Mapa, tipy a tajná místa pro tu cestu, co plánuješ už roky. Tentokrát to fakt vyjedeš.",
+    tags:["q2:0","q2:1","q2:2","q2:3","q2:4","q2:5","q0:6"] },
+
+  { emoji:"📗", name:"Kuchařka",
+    desc:"Uvařit něco pořádného, co lidi u stolu umlčí. Tyhle recepty ti k tomu pomůžou.",
+    tags:["q0:3","q5:4","q5:2"] },
+
+  { emoji:"📙", name:"Kniha o psychologii nebo filozofii",
+    desc:"Přečteš to a začneš vidět lidi kolem sebe úplně jinak. Varování: budou z tebe otázky na každou párty.",
+    tags:["q3:5","q0:0","q5:2"] },
+
+  { emoji:"🎟️", name:"Lístky na koncert",
+    desc:"Živá hudba tě praští do hrudi způsobem, který ze sluchátek prostě nezažiješ. Tohle si zasloužíš.",
+    tags:["q1:0","q1:2","q1:5","q0:4","q5:1"] },
+
+  { emoji:"🎼", name:"Lístky na operu nebo filharmonii",
+    desc:"Oblečeš se o něco líp než normálně, sedneš do krásného sálu a necháš se odnést. Pak to budeš vyprávět měsíce.",
+    tags:["q1:1","q3:1","q5:1","q0:4"] },
+
+  { emoji:"⚽", name:"Lístky na sportovní zápas",
+    desc:"Křičet, skákat, nadávat na rozhodčího a smát se tomu pak po cestě domů. Lepší terapii nekoupíš.",
+    tags:["q4:2","q5:1","q0:1"] },
+
+  { emoji:"🎬", name:"Předplatné streamovací služby",
+    desc:"Měsíc filmů a seriálů bez limit. Pozor — víkendy zmizí rychleji, než si myslíš.",
+    tags:["q0:0","q5:2","q1:2","q1:4"] },
+
+  { emoji:"🦁", name:"Vstupenky do zoo nebo botanické zahrady",
+    desc:"Výlet za zvířaty, co si náramně užiješ. Možná si i pohladíš opici.",
+    tags:["q3:3","q2:1","q5:3","q0:5"] },
+
+  { emoji:"🎭", name:"Lístky do divadla nebo na muzikál",
+    desc:"Sedíš v hledišti, světla zhasnou a na dvě hodiny zapomeneš na všechno ostatní. Přesně takhle to má být.",
+    tags:["q3:1","q1:1","q5:1"] },
+
+  { emoji:"🏛️", name:"Lístky do muzea nebo galerie",
+    desc:"Půjdeš se podívat, co tu bylo před námi. Odejdeš s tím, že víš o světě o kus víc.",
+    tags:["q3:4","q3:1","q2:3","q5:1"] },
+
+  { emoji:"🎮", name:"Indie videohra (dárková karta Steam/PS)",
+    desc:"Vyber si hru, zalezni na víkend a vylezni ven až po titulcích. Bez výčitek svědomí.",
+    tags:["q0:2","q5:2","q1:4","q5:5"] },
+
+  { emoji:"🧩", name:"Prémiová desková hra",
+    desc:"Sednete si spolu, vymyslíte strategii a pak se pohádáte. A příště si zahrajete znova.",
+    tags:["q0:2","q5:0","q5:5"] },
+
+  { emoji:"🧘", name:"Jóga podložka a set pomůcek",
+    desc:"Protáhneš se, vydýcháš se a zjistíš, že ti to dává čím dál větší smysl. Jednou za čas.",
+    tags:["q4:3","q5:2","q0:1"] },
+
+  { emoji:"🎨", name:"Sada na malování nebo skicování",
+    desc:"Vezmeš štětec nebo tužku, a najednou zmizí hodina. Výsledek je tvůj — bez hodnocení.",
+    tags:["q3:1","q0:3","q5:5"] },
+
+  { emoji:"🔭", name:"Dalekohled nebo hvězdářský atlas",
+    desc:"Namíříš to na oblohu nebo do lesa a najednou vidíš věci, co tu jsou pořád, jen jsi je nikdy neviděl.",
+    tags:["q3:0","q2:1","q5:3","q3:4"] },
+
+  { emoji:"🚴", name:"Sportovní doplňky (cyklo, běh…)",
+    desc:"Vyrazíš ven, naložíš kilometry a vrátíš se unavený, ale spokojený. S tímhle to půjde lépe.",
+    tags:["q4:0","q0:1","q5:3"] },
+
+  { emoji:"🏊", name:"Prémiové plavecké brýle nebo čepice",
+    desc:"Skočíš do vody, odplaveš si svých pár drah a vylezíš ven jako nový člověk. Tohle k tomu patří.",
+    tags:["q4:1","q0:1","q2:0"] },
+
+  { emoji:"🌱", name:"Sada pro pěstování bylinek doma",
+    desc:"Zasadíš, zaléváš, čekáš. A pak jednoho rána to tam je — živé, voňavé a tvoje.",
+    tags:["q3:3","q0:3","q5:2","q0:5"] },
+
+  { emoji:"🎧", name:"Bezdrátová sluchátka",
+    desc:"Nasadíš je, pustíš svoji věc a svět kolem tě přestane existovat. Přesně tak to má být.",
+    tags:["q1:0","q1:1","q1:2","q1:3","q1:4","q1:5","q0:4"] },
+
+  { emoji:"🏕️", name:"Turistický denní batoh",
+    desc:"Hodíš tam vodu, svačinu a bundu, vyrazíš do kopce a vrátíš se s výhledem v hlavě.",
+    tags:["q2:1","q4:0","q5:3","q0:1","q4:5"] },
+
+  { emoji:"🥊", name:"Vstupní permanentka do fitness nebo bojového klubu",
+    desc:"Přijdeš, zapotíš se, trochu trpíš — a pak se z toho stane ta nejlepší část týdne.",
+    tags:["q4:4","q0:1","q5:1"] },
+
+  { emoji:"🎾", name:"Lístky na tenisový nebo badmintonový kurz",
+    desc:"Míček, raketa, kurz — a najednou víš, co dělat s rukama. Překvapíš sám sebe.",
+    tags:["q4:6","q0:1","q5:1"] },
+
+  { emoji:"🍳", name:"Lístek na kulinářský kurz",
+    desc:"Naučíš se uvařit něco, co bys jinak nikdy nezkoušel. A pak to uvaříš doma a budeš hero.",
+    tags:["q0:3","q5:4","q5:0"] },
+];
+
+function computeGifts(ans) {
+  const keys = ans.map((a, i) => `q${i}:${a}`);
+  const scored = GIFTS.map(g => ({
+    ...g,
+    score: g.tags.filter(t => keys.includes(t)).length
+  }));
+  scored.sort((a, b) => b.score - a.score);
+  const seen = new Set();
+  const top = [];
+  for (const g of scored) {
+    if (!seen.has(g.name)) { seen.add(g.name); top.push(g); }
+    if (top.length === 3) break;
+  }
+  return top;
+}
+
+/* ─── STATE ─────────────────────────────────────────── */
+let current = 0;
+let answers = new Array(questions.length).fill(null);
+// votes[giftIndex] = { vote: 'up'|'down'|null, comment: '' }
+let votes = [];
+
+/* ─── PARTICLES ─────────────────────────────────────── */
+const canvas = document.getElementById('particle-canvas');
+const ctx    = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const COLORS = ['#6366f1','#a855f7','#ec4899','#f59e0b','#10b981','#3b82f6'];
+
+function spawnParticles(x, y, count = 28) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+    const speed = 3 + Math.random() * 5;
+    const size  = 4 + Math.random() * 7;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      size, color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      life: 1, decay: 0.018 + Math.random() * 0.02, gravity: 0.18,
+      isSquare: Math.random() > 0.5,
+      rot: Math.random() * Math.PI * 2, rotV: (Math.random() - 0.5) * 0.25,
+    });
+  }
+  if (!rafRunning) animateParticles();
+}
+
+let rafRunning = false;
+function animateParticles() {
+  rafRunning = true;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.vx *= 0.97;
+    p.life -= p.decay; p.rot += p.rotV;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    if (p.isSquare) ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+    else { ctx.beginPath(); ctx.arc(0,0,p.size/2,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+  }
+  if (particles.length > 0) requestAnimationFrame(animateParticles);
+  else { rafRunning = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+}
+
+/* ─── RIPPLE ────────────────────────────────────────── */
+function addRipple(el, event) {
+  const rect = el.getBoundingClientRect();
+  const x = (event?.clientX ?? rect.left + rect.width/2) - rect.left;
+  const y = (event?.clientY ?? rect.top  + rect.height/2) - rect.top;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x-size/2}px;top:${y-size/2}px`;
+  el.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+/* ─── REACTION TOASTS ───────────────────────────────── */
+const REACTIONS = [
+  { emoji: "🔥", text: "To jsou hustý zájmy!" },
+  { emoji: "😮", text: "Taky bych tohle chtěl umět!" },
+  { emoji: "🤩", text: "Vkus na jedničku!" },
+  { emoji: "👀", text: "Tohle jsem nečekal/a!" },
+  { emoji: "💪", text: "Člověk s citem pro styl!" },
+  { emoji: "🎉", text: "Super volba, fakt!" },
+  { emoji: "🧠", text: "Člověk, co přemýšlí!" },
+  { emoji: "🌟", text: "To zní naprosto skvěle!" },
+  { emoji: "😄", text: "S tebou by se nenudilo!" },
+  { emoji: "🎯", label: "Přesně trefeno!" , text: "Přesně trefeno!" },
+  { emoji: "🚀", text: "Člověk plný energie!" },
+  { emoji: "🍀", text: "Dobrý výběr, fakt!" },
+  { emoji: "😎", text: "Tohle tě dělá zajímavým/ou!" },
+  { emoji: "🤯", text: "To je kombinace!" },
+  { emoji: "✨", text: "Člověk s charakterem!" },
+  { emoji: "👏", text: "Tohle bych si přál/a taky!" },
+  { emoji: "🦄", text: "Originální, to se cení!" },
+  { emoji: "🎸", text: "Máš to v sobě!" },
+];
+
+let lastReactionIdx = -1;
+let toastTimer = null;
+
+function showReaction() {
+  // Pick a random reaction, avoid immediate repeat
+  let idx;
+  do { idx = Math.floor(Math.random() * REACTIONS.length); } while (idx === lastReactionIdx);
+  lastReactionIdx = idx;
+  const r = REACTIONS[idx];
+
+  const toast = document.getElementById('reaction-toast');
+  document.getElementById('reaction-emoji').textContent = r.emoji;
+  document.getElementById('reaction-text').textContent  = r.text;
+
+  // Reset any running animation
+  toast.classList.remove('show','hide');
+  void toast.offsetWidth;
+  toast.classList.add('show');
+
+  // Auto-hide after 2.2s
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    toast.addEventListener('animationend', () => toast.classList.remove('hide'), { once: true });
+  }, 800);
+}
+
+/* ─── FLASH ─────────────────────────────────────────── */
+const flashEl   = document.getElementById('flash');
+const flashIcon = document.getElementById('flash-icon');
+const flashEmojis = ['✨','⭐','🌟','💫','🎯','🔥'];
+function showFlash() {
+  flashIcon.textContent = flashEmojis[current % flashEmojis.length];
+  flashEl.classList.remove('active');
+  void flashEl.offsetWidth;
+  flashEl.classList.add('active');
+  flashEl.addEventListener('animationend', () => flashEl.classList.remove('active'), { once: true });
+}
+
+/* ─── RENDER ────────────────────────────────────────── */
+function render(direction = 0) {
+  const area = document.getElementById('question-area');
+  if (direction !== 0) {
+    area.classList.remove('slide-in','slide-out');
+    area.classList.add('slide-out');
+    setTimeout(() => {
+      area.classList.remove('slide-out');
+      _renderContent();
+      area.classList.add('slide-in');
+    }, 200);
+  } else {
+    _renderContent();
+    area.classList.add('slide-in');
+  }
+  updateProgress();
+  document.getElementById('btn-back').disabled = current === 0;
+  document.getElementById('btn-next').disabled = answers[current] === null;
+  document.getElementById('btn-next').textContent =
+    current === questions.length - 1 ? 'Odeslat ✓' : 'Dále →';
+}
+
+function _renderContent() {
+  const q = questions[current];
+  document.getElementById('q-number').textContent = `Otázka ${current + 1}`;
+  document.getElementById('q-text').textContent = q.text;
+  const container = document.getElementById('options-container');
+  container.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const div = document.createElement('label');
+    div.className = 'option' + (answers[current] === i ? ' selected' : '');
+    div.innerHTML = `
+      <input type="radio" name="q${current}" value="${i}" ${answers[current] === i ? 'checked' : ''}>
+      <div class="radio-circle"><div class="radio-dot"></div></div>
+      <span class="option-emoji">${opt.emoji}</span>
+      <span class="option-label">${opt.label}</span>
+    `;
+    div.addEventListener('click', (e) => selectOption(i, e));
+    container.appendChild(div);
+  });
+}
+
+function selectOption(i, event) {
+  const wasNew = answers[current] !== i;
+  answers[current] = i;
+  _renderContent();
+  document.getElementById('btn-next').disabled = false;
+  if (wasNew) {
+    const chosen = document.getElementById('options-container').children[i];
+    addRipple(chosen, event);
+    showFlash();
+    showReaction();
+    const rect = chosen.getBoundingClientRect();
+    spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, 28);
+  }
+}
+
+function updateProgress() {
+  const pct = Math.round((current / questions.length) * 100);
+  document.getElementById('progress-text').textContent = `Otázka ${current + 1} z ${questions.length}`;
+  document.getElementById('progress-pct').textContent = pct + ' %';
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function nextQuestion() {
+  if (answers[current] === null) return;
+  if (current < questions.length - 1) { current++; render(1); }
+  else showResult();
+}
+
+function prevQuestion() {
+  if (current > 0) { current--; render(-1); }
+}
+
+/* ─── RESULT + GIFTS ────────────────────────────────── */
+function showResult() {
+  document.getElementById('form-screen').style.display = 'none';
+  document.getElementById('result-screen').style.display = 'block';
+  document.getElementById('result-icon').classList.add('pop');
+  spawnParticles(window.innerWidth / 2, window.innerHeight / 2, 70);
+
+  // Summary list
+  const list = document.getElementById('result-list');
+  list.innerHTML = '';
+  questions.forEach((q, i) => {
+    const opt = q.options[answers[i]];
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    item.innerHTML = `<span>${q.text}</span><span>${opt.emoji} ${opt.label}</span>`;
+    list.appendChild(item);
+    setTimeout(() => item.classList.add('visible'), 100 + i * 75);
+  });
+
+  // Gifts
+  const gifts = computeGifts(answers);
+  votes = gifts.map(() => ({ vote: null, comment: '' }));
+  const rankClass = ['gold','silver','bronze'];
+  const giftContainer = document.getElementById('gifts-container');
+  giftContainer.innerHTML = '';
+
+  gifts.forEach((g, idx) => {
+    const card = document.createElement('div');
+    card.className = 'gift-card';
+    card.dataset.idx = idx;
+    card.innerHTML = `
+      <div class="gift-top">
+        <div class="gift-rank ${rankClass[idx]}">${idx + 1}</div>
+        <div class="gift-body">
+          <div class="gift-name">${g.emoji} ${g.name}</div>
+          <div class="gift-desc">${g.desc}</div>
+        </div>
+      </div>
+      <div class="vote-row">
+        <span class="vote-label">Sedí ti to?</span>
+        <button class="vote-btn" data-idx="${idx}" data-dir="up"  onclick="castVote(${idx},'up',  this)">👍 <span class="vote-count" id="up-${idx}">0</span></button>
+        <button class="vote-btn" data-idx="${idx}" data-dir="down" onclick="castVote(${idx},'down',this)">👎 <span class="vote-count" id="dn-${idx}">0</span></button>
+        <button class="vote-btn" style="margin-left:auto;font-size:0.78rem;padding:0.28rem 0.65rem;" onclick="toggleComment(${idx})">💬 Komentář</button>
+      </div>
+      <div class="comment-area" id="ca-${idx}">
+        <textarea rows="2" placeholder="Napiš sem, proč ti dárek sedí nebo nesedí…" oninput="votes[${idx}].comment=this.value"></textarea>
+        <button class="comment-submit" onclick="submitComment(${idx})">Odeslat ✓</button>
+      </div>
+      <div class="submitted-msg">✅ Díky za zpětnou vazbu!</div>
+    `;
+    giftContainer.appendChild(card);
+    setTimeout(() => card.classList.add('visible'), 700 + idx * 160);
+  });
+}
+
+/* ─── VOTING LOGIC ──────────────────────────────────── */
+const voteCounts = { up: [0,0,0], down: [0,0,0] };
+
+function castVote(idx, dir, btn) {
+  const card = document.querySelector(`.gift-card[data-idx="${idx}"]`);
+  if (card.classList.contains('submitted')) return;
+
+  const prev = votes[idx].vote;
+  // Toggle off
+  if (prev === dir) {
+    votes[idx].vote = null;
+    voteCounts[dir][idx]--;
+    btn.classList.remove('active-up','active-down');
+  } else {
+    // Remove previous vote
+    if (prev) {
+      voteCounts[prev][idx]--;
+      document.querySelector(`.vote-btn[data-idx="${idx}"][data-dir="${prev}"]`)
+              .classList.remove('active-up','active-down');
+    }
+    votes[idx].vote = dir;
+    voteCounts[dir][idx]++;
+    btn.classList.add(dir === 'up' ? 'active-up' : 'active-down');
+  }
+  document.getElementById(`up-${idx}`).textContent = voteCounts.up[idx];
+  document.getElementById(`dn-${idx}`).textContent = voteCounts.down[idx];
+}
+
+function toggleComment(idx) {
+  const ca = document.getElementById(`ca-${idx}`);
+  ca.classList.toggle('open');
+}
+
+function submitComment(idx) {
+  const card = document.querySelector(`.gift-card[data-idx="${idx}"]`);
+  card.classList.add('submitted');
+  // close comment area
+  document.getElementById(`ca-${idx}`).classList.remove('open');
+  // small particle burst near the card
+  const rect = card.getBoundingClientRect();
+  spawnParticles(rect.left + rect.width/2, rect.top + 20, 18);
+}
+
+/* ─── RESTART ───────────────────────────────────────── */
+function restart() {
+  current = 0;
+  answers = new Array(questions.length).fill(null);
+  votes = [];
+  voteCounts.up   = [0,0,0];
+  voteCounts.down = [0,0,0];
+  document.getElementById('result-screen').style.display = 'none';
+  document.getElementById('result-icon').classList.remove('pop');
+  document.getElementById('gifts-container').innerHTML = '';
+  const eb = document.getElementById('btn-email');
+  eb.disabled = false; eb.classList.remove('sending'); eb.innerHTML = '📤 Odeslat výsledky';
+  document.getElementById('email-status').textContent = '';
+  document.getElementById('email-status').className = 'email-status';
+  document.getElementById('form-screen').style.display = 'block';
+  render(0);
+}
+
+render(0);
+</script>
+</body>
+</html>
