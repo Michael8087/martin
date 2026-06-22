@@ -12,10 +12,13 @@
       background: linear-gradient(135deg, #f0f4ff 0%, #fce7f3 100%);
       min-height: 100vh;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      padding: 2rem;
+      padding: 1rem;
       overflow-x: hidden;
+    }
+    @media (min-width: 600px) {
+      body { align-items: center; padding: 2rem; }
     }
 
     #particle-canvas {
@@ -36,14 +39,20 @@
 
     .card-header {
       background: linear-gradient(135deg, #6366f1, #a855f7);
-      padding: 2rem 2.5rem;
+      padding: 1.4rem 1.2rem;
       color: white;
     }
-    .card-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.4rem; }
-    .card-header p  { opacity: 0.85; font-size: 0.95rem; }
+    .card-header h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .card-header p  { opacity: 0.85; font-size: 0.88rem; }
+    @media (min-width: 600px) {
+      .card-header { padding: 2rem 2.5rem; }
+      .card-header h1 { font-size: 1.6rem; margin-bottom: 0.4rem; }
+      .card-header p  { font-size: 0.95rem; }
+    }
 
     /* Progress */
-    .progress-wrap { padding: 1.2rem 2.5rem 0; }
+    .progress-wrap { padding: 1rem 1.2rem 0; }
+    @media (min-width: 600px) { .progress-wrap { padding: 1.2rem 2.5rem 0; } }
     .progress-label {
       display: flex; justify-content: space-between;
       font-size: 0.8rem; color: #888; margin-bottom: 6px;
@@ -57,16 +66,18 @@
     }
 
     /* Question */
-    .question-area { padding: 1.6rem 2.5rem; }
+    .question-area { padding: 1rem 1.2rem; }
+    @media (min-width: 600px) { .question-area { padding: 1.6rem 2.5rem; } }
     .question-number {
       font-size: 0.72rem; font-weight: 600;
       letter-spacing: 0.08em; text-transform: uppercase;
       color: #a855f7; margin-bottom: 0.4rem;
     }
     .question-text {
-      font-size: 1.1rem; font-weight: 600;
-      color: #1f2937; margin-bottom: 1.1rem; line-height: 1.5;
+      font-size: 1rem; font-weight: 600;
+      color: #1f2937; margin-bottom: 1rem; line-height: 1.5;
     }
+    @media (min-width: 600px) { .question-text { font-size: 1.1rem; margin-bottom: 1.1rem; } }
 
     @keyframes slideIn {
       from { opacity: 0; transform: translateX(40px); }
@@ -79,13 +90,13 @@
     .slide-in  { animation: slideIn  0.30s cubic-bezier(.4,0,.2,1) both; }
     .slide-out { animation: slideOut 0.20s cubic-bezier(.4,0,.2,1) both; }
 
-    /* Options grid – 2 columns for many options */
+    /* Options grid – 1 col on mobile, 2 col on larger */
     .options {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
     }
-    @media (max-width: 480px) { .options { grid-template-columns: 1fr; } }
+    @media (min-width: 500px) { .options { grid-template-columns: 1fr 1fr; gap: 0.5rem; } }
 
     .option {
       display: flex; align-items: center; gap: 0.7rem;
@@ -146,13 +157,15 @@
     /* Nav */
     .nav {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 0.5rem 2.5rem 1.8rem;
+      padding: 0.5rem 1.2rem 1.4rem;
     }
+    @media (min-width: 600px) { .nav { padding: 0.5rem 2.5rem 1.8rem; } }
     button {
       font-family: inherit; font-size: 0.92rem; font-weight: 600;
-      padding: 0.7rem 1.6rem; border-radius: 10px; border: none;
+      padding: 0.65rem 1.3rem; border-radius: 10px; border: none;
       cursor: pointer; transition: all 0.18s ease;
     }
+    @media (min-width: 600px) { button { padding: 0.7rem 1.6rem; } }
     .btn-back { background: #f3f4f6; color: #6b7280; }
     .btn-back:hover { background: #e5e7eb; }
     .btn-back:disabled { opacity: 0.3; cursor: default; }
@@ -193,7 +206,9 @@
       font-size: 0.95rem;
       font-weight: 600;
       color: #1f2937;
-      white-space: nowrap;
+      white-space: normal;
+      max-width: 90vw;
+      text-align: center;
       z-index: 1000;
       pointer-events: none;
       opacity: 0;
@@ -216,16 +231,20 @@
     #reaction-toast.hide { animation: toastOut 0.3s ease forwards; }
 
     /* Result */
-    .result { display: none; padding: 2.2rem 2.5rem; text-align: center; }
-    .result-icon { font-size: 3.5rem; margin-bottom: 0.8rem; }
+    .result { display: none; padding: 1.2rem 1.2rem 1.8rem; text-align: center; }
+    @media (min-width: 600px) { .result { padding: 2.2rem 2.5rem; } }
+    .result-icon { font-size: 2.8rem; margin-bottom: 0.6rem; }
+    @media (min-width: 600px) { .result-icon { font-size: 3.5rem; margin-bottom: 0.8rem; } }
     @keyframes popIn {
       0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
       70%  { transform: scale(1.2) rotate(5deg); }
       100% { transform: scale(1) rotate(0); opacity: 1; }
     }
     .result-icon.pop { animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1) both; }
-    .result h2 { font-size: 1.4rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem; }
-    .result > p { color: #6b7280; font-size: 0.9rem; margin-bottom: 1.4rem; }
+    .result h2 { font-size: 1.2rem; font-weight: 700; color: #1f2937; margin-bottom: 0.4rem; }
+    @media (min-width: 600px) { .result h2 { font-size: 1.4rem; margin-bottom: 0.5rem; } }
+    .result > p { color: #6b7280; font-size: 0.85rem; margin-bottom: 1.2rem; }
+    @media (min-width: 600px) { .result > p { font-size: 0.9rem; margin-bottom: 1.4rem; } }
 
     .result-list {
       text-align: left; background: #f9fafb;
@@ -280,6 +299,14 @@
     .gift-body { flex: 1; }
     .gift-name { font-weight: 700; color: #1f2937; font-size: 0.95rem; margin-bottom: 0.2rem; }
     .gift-desc { font-size: 0.8rem; color: #6b7280; line-height: 1.4; }
+
+    /* result-item wrapping on mobile */
+    .result-item { flex-wrap: wrap; gap: 0.3rem; }
+    .result-item span:first-child { max-width: 100%; }
+    @media (min-width: 500px) {
+      .result-item { flex-wrap: nowrap; }
+      .result-item span:first-child { max-width: 52%; }
+    }
 
     /* Vote row */
     .vote-row {
@@ -350,9 +377,11 @@
 
     /* Email button */
     .email-row {
-      display: flex; gap: 0.8rem; justify-content: center;
+      display: flex; gap: 0.7rem; justify-content: center;
       flex-wrap: wrap; margin-bottom: 1rem;
+      flex-direction: column; align-items: center;
     }
+    @media (min-width: 420px) { .email-row { flex-direction: row; } }
     .btn-email {
       background: linear-gradient(135deg, #6366f1, #a855f7);
       color: white;
@@ -504,7 +533,11 @@ const questions = [
   },
 ];
 
-/
+/* ─── FORMSPREE CONFIG ───────────────────────────────────
+   1. Jdi na https://formspree.io a zaregistruj se (zdarma)
+   2. Klikni "New Form", zadej mike.minovsky@gmail.com
+   3. Zkopíruj ID z URL (vypadá jako: xpzvqwer)
+   4. Vlož ho sem:
 ──────────────────────────────────────────────────────── */
 const FORMSPREE_ID = 'maqgwzrq';  // ← např. 'xpzvqwer'
 
