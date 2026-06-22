@@ -310,15 +310,15 @@
 
     /* Vote row */
     .vote-row {
-      display: flex; align-items: center;
+      display: flex; align-items: center; justify-content: space-between;
       margin-top: 0.8rem; padding-top: 0.7rem;
       border-top: 1px solid #ede9fe;
-      gap: 0.5rem;
     }
-    .vote-label { font-size: 0.78rem; color: #6b7280; white-space: nowrap; flex-shrink: 0; }
-    .vote-thumbs { display: flex; gap: 0.4rem; flex-shrink: 0; }
+    .vote-left { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+    .vote-label { font-size: 0.78rem; color: #6b7280; white-space: nowrap; }
+    .vote-thumbs { display: flex; gap: 0.4rem; }
     .vote-btn {
-      font-size: 1rem; padding: 0.3rem 0.7rem;
+      font-size: 1rem; padding: 0.3rem 0.65rem;
       border-radius: 8px; border: 1.5px solid #e5e7eb;
       background: white; cursor: pointer;
       transition: all 0.15s;
@@ -329,7 +329,7 @@
     .vote-btn.active-up   { border-color: #10b981; background: #ecfdf5; color: #059669; }
     .vote-btn.active-down { border-color: #ef4444; background: #fef2f2; color: #dc2626; }
     .vote-count { font-size: 0.78rem; color: #9ca3af; }
-    .vote-comment-btn { margin-left: auto; flex-shrink: 0; }
+    .vote-comment-btn { font-size: 0.78rem !important; padding: 0.28rem 0.65rem !important; flex-shrink: 0; }
 
     /* Comment area */
     .comment-area {
@@ -941,12 +941,14 @@ function showResult() {
         </div>
       </div>
       <div class="vote-row">
-        <span class="vote-label">Sedí ti to?</span>
-        <div class="vote-thumbs">
-          <button class="vote-btn" data-idx="${idx}" data-dir="up"  onclick="castVote(${idx},'up',  this)">👍 <span class="vote-count" id="up-${idx}">0</span></button>
-          <button class="vote-btn" data-idx="${idx}" data-dir="down" onclick="castVote(${idx},'down',this)">👎 <span class="vote-count" id="dn-${idx}">0</span></button>
+        <div class="vote-left">
+          <span class="vote-label">Sedí ti to?</span>
+          <div class="vote-thumbs">
+            <button class="vote-btn" data-idx="${idx}" data-dir="up"  onclick="castVote(${idx},'up',  this)">👍 <span class="vote-count" id="up-${idx}">0</span></button>
+            <button class="vote-btn" data-idx="${idx}" data-dir="down" onclick="castVote(${idx},'down',this)">👎 <span class="vote-count" id="dn-${idx}">0</span></button>
+          </div>
         </div>
-        <button class="vote-btn vote-comment-btn" style="font-size:0.78rem;padding:0.28rem 0.65rem;" onclick="toggleComment(${idx})">💬 Komentář</button>
+        <button class="vote-btn vote-comment-btn" onclick="toggleComment(${idx})">💬 Komentář</button>
       </div>
       <div class="comment-area" id="ca-${idx}">
         <textarea rows="2" placeholder="Napiš sem, proč ti dárek sedí nebo nesedí…" oninput="votes[${idx}].comment=this.value"></textarea>
